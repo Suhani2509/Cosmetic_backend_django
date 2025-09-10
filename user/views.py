@@ -1,11 +1,12 @@
 from django.shortcuts import render
-from .serializers import RegisterSerializer
+from .serializers import RegisterSerializer,UserSerializer
 from rest_framework import status
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
-from rest_framework import permissions
+from rest_framework.exceptions import APIException
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
@@ -20,7 +21,6 @@ class RegisterUserAPIView(APIView):
         security=[],
     )
     def post(self,request):
-        # get request data and save
         serializer = RegisterSerializer(data=request.data)
 
         if not serializer.is_valid():
@@ -41,3 +41,20 @@ def check_email(request):
     email = request.GET.get('email')
     exists = User.objects.filter(email=email).exists()
     return Response({"exists": exists})
+
+@api_view(['POST'])
+def login_user(request):
+    email = request.data.get('email')
+    password = request.data.get('password')
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return Response({'error':'Invalid email or password'},status=400)
+    
+    if user.check_password(password):
+        return Response({
+            'id':user.id,
+            'email':user.email,
+            },status=200)
+    else:
+        return Response({'error':'Invalid email or password'},status=400)
